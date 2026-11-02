@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SmartAlloc automated room allocation system using constraint satisfaction">
+  <title>SmartAlloc · Automated Allocation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><span class="brand-mark"><i class="fa-solid fa-diagram-project"></i></span><span>Smart<span>Alloc</span></span></div>
+      <div class="brand-subtitle">CSP allocation workspace</div>
+      <nav class="nav-list" aria-label="Primary navigation">
+        <button class="nav-item active" data-page="dashboard"><i class="fa-solid fa-grid-2"></i><span>Dashboard</span></button>
+        <div class="nav-label">Manage data</div>
+        <button class="nav-item" data-page="students"><i class="fa-solid fa-user-graduate"></i><span>Students</span></button>
+        <button class="nav-item" data-page="groups"><i class="fa-solid fa-layer-group"></i><span>Classes & groups</span></button>
+        <button class="nav-item" data-page="rooms"><i class="fa-solid fa-door-open"></i><span>Rooms</span></button>
+        <button class="nav-item" data-page="seats"><i class="fa-solid fa-chair"></i><span>Seats & beds</span></button>
+        <div class="nav-label">Allocation</div>
+        <button class="nav-item" data-page="generate"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Generate allocation</span></button>
+        <button class="nav-item" data-page="results"><i class="fa-solid fa-table-list"></i><span>Allocation results</span></button>
+        <button class="nav-item" data-page="validation"><i class="fa-solid fa-shield-halved"></i><span>Validation report</span></button>
+        <button class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-line"></i><span>Analytics</span></button>
+        <div class="nav-label">System</div>
+        <button class="nav-item" data-page="settings"><i class="fa-solid fa-sliders"></i><span>Settings</span></button>
+      </nav>
+      <div class="sidebar-footer"><span class="status-dot"></span><span>MongoDB Atlas</span><span class="live-pill">LIVE</span></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="icon-btn mobile-menu" id="menuBtn" aria-label="Open navigation"><i class="fa-solid fa-bars"></i></button>
+        <div><div class="eyebrow">AUTOMATED ROOM ALLOCATION</div><h1 id="pageTitle">Dashboard</h1></div>
+        <div class="topbar-actions">
+          <label class="mode-control"><span>Mode</span><select id="modeSelect"><option>Examination Seating</option><option>Hostel Room/Bed</option></select></label>
+          <button class="icon-btn" id="refreshBtn" title="Refresh dashboard" aria-label="Refresh"><i class="fa-solid fa-rotate"></i></button>
+          <div class="avatar">AR</div>
+        </div>
+      </header>
+
+      <div id="appAlert" class="app-alert hidden"></div>
+      <div id="loading" class="loading-overlay hidden"><div class="spinner"></div><span>Working on it…</span></div>
+
+      <section class="page active-page" id="page-dashboard">
+        <div class="page-intro"><div><p class="kicker">Good to see you</p><h2>Allocation command center</h2><p class="muted">Monitor capacity, accessibility and constraint health in one place.</p></div><button class="primary-btn" data-page-jump="generate"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate allocation</button></div>
+        <div class="stat-grid" id="statsGrid"></div>
+        <div class="dashboard-grid">
+          <div class="panel chart-panel wide"><div class="panel-head"><div><h3>Room utilization</h3><p class="muted">Occupied seats across current rooms</p></div><span class="panel-icon blue"><i class="fa-solid fa-chart-column"></i></span></div><canvas id="roomChart" height="120"></canvas></div>
+          <div class="panel chart-panel"><div class="panel-head"><div><h3>Allocation health</h3><p class="muted">Current assignment coverage</p></div><span class="panel-icon teal"><i class="fa-solid fa-circle-check"></i></span></div><canvas id="healthChart" height="180"></canvas></div>
+          <div class="panel chart-panel"><div class="panel-head"><div><h3>Student distribution</h3><p class="muted">By class</p></div><span class="panel-icon indigo"><i class="fa-solid fa-users"></i></span></div><canvas id="classChart" height="180"></canvas></div>
+        </div>
+        <div class="panel insight-panel"><div class="insight-icon"><i class="fa-solid fa-lightbulb"></i></div><div><h3>Constraint-aware planning</h3><p class="muted">SmartAlloc applies forward checking, MRV and least-constraining-value ordering. Run validation after resizing rooms or changing accessibility settings.</p></div><button class="text-btn" data-page-jump="validation">View validation <i class="fa-solid fa-arrow-right"></i></button></div>
+      </section>
+
+      <section class="page" id="page-students">
+        <div class="page-intro"><div><p class="kicker">Data management</p><h2>Students</h2><p class="muted">Manage candidates, groups, priorities and accessibility requirements.</p></div><div class="button-row"><button class="outline-btn" id="exportStudents"><i class="fa-solid fa-file-csv"></i> Export CSV</button><label class="outline-btn file-btn"><i class="fa-solid fa-upload"></i> Import CSV<input type="file" id="studentCsv" accept=".csv"></label><button class="primary-btn" id="addStudent"><i class="fa-solid fa-plus"></i> Add student</button></div></div>
+        <div class="panel filter-panel"><div class="search-box"><i class="fa-solid fa-search"></i><input id="studentSearch" placeholder="Search by ID, name or email…"></div><select id="studentClassFilter"><option value="">All classes</option></select><select id="studentGroupFilter"><option value="">All groups</option></select><select id="studentPriorityFilter"><option value="">All priorities</option><option>Critical</option><option>High</option><option>Normal</option><option>Low</option></select><select id="studentAccessFilter"><option value="">Accessibility: all</option><option value="true">Required</option><option value="false">Standard</option></select></div>
+        <div class="panel table-panel"><div class="panel-head"><div><h3>Student registry</h3><p class="muted" id="studentCountLabel">Loading students…</p></div><span class="table-note">IDs are unique</span></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Class / section</th><th>Group</th><th>Department</th><th>Priority</th><th>Access</th><th>Status</th><th></th></tr></thead><tbody id="studentsTable"></tbody></table></div><div class="pagination" id="studentPagination"></div></div>
+      </section>
+
+      <section class="page" id="page-groups">
+        <div class="page-intro"><div><p class="kicker">Data management</p><h2>Classes & groups</h2><p class="muted">Create the academic structure used by the CSP separation rules.</p></div><div class="button-row"><button class="outline-btn" id="addGroup"><i class="fa-solid fa-plus"></i> Add group</button><button class="primary-btn" id="addClass"><i class="fa-solid fa-plus"></i> Add class</button></div></div>
+        <div class="split-grid"><div class="panel table-panel"><div class="panel-head"><h3>Classes</h3><span class="panel-icon indigo"><i class="fa-solid fa-book"></i></span></div><div class="table-wrap"><table><thead><tr><th>Class</th><th>Department</th><th>Sections</th><th>Students</th><th></th></tr></thead><tbody id="classesTable"></tbody></table></div></div><div class="panel table-panel"><div class="panel-head"><h3>Groups</h3><span class="panel-icon teal"><i class="fa-solid fa-layer-group"></i></span></div><div class="table-wrap"><table><thead><tr><th>Group</th><th>Class</th><th>Students</th><th></th></tr></thead><tbody id="groupsTable"></tbody></table></div></div></div>
+      </section>
+
+      <section class="page" id="page-rooms">
+        <div class="page-intro"><div><p class="kicker">Resource planning</p><h2>Rooms</h2><p class="muted">Configure capacity, accessibility and dynamic seat geometry.</p></div><div class="button-row"><button class="outline-btn" id="exportRooms"><i class="fa-solid fa-file-csv"></i> Export CSV</button><button class="primary-btn" id="addRoom"><i class="fa-solid fa-plus"></i> Add room</button></div></div>
+        <div class="panel filter-panel"><div class="search-box"><i class="fa-solid fa-search"></i><input id="roomSearch" placeholder="Search room ID or name…"></div><select id="roomAvailability"><option value="">All room status</option><option value="true">Available</option><option value="false">Disabled</option></select></div>
+        <div class="room-grid" id="roomCards"></div>
+      </section>
+
+      <section class="page" id="page-seats">
+        <div class="page-intro"><div><p class="kicker">Resource planning</p><h2>Seats & beds</h2><p class="muted">Inspect seat status, block resources and manage accessibility markers.</p></div><div class="button-row"><button class="outline-btn" id="exportSeats"><i class="fa-solid fa-file-csv"></i> Export CSV</button></div></div>
+        <div class="panel filter-panel"><select id="seatRoomFilter"><option value="">Select a room</option></select><div class="legend"><span><i class="legend-dot available"></i> Available</span><span><i class="legend-dot occupied"></i> Occupied</span><span><i class="legend-dot blocked"></i> Blocked</span><span><i class="legend-dot accessible"></i> Accessible</span></div></div>
+        <div class="panel"><div class="panel-head"><div><h3 id="seatMapTitle">Room seat map</h3><p class="muted">Click a seat to block or unblock it.</p></div><span id="seatMapSummary" class="table-note"></span></div><div class="seat-map" id="seatMap"><div class="empty-state"><i class="fa-solid fa-chair"></i><h3>Select a room</h3><p class="muted">Choose a room above to view its dynamic grid.</p></div></div></div>
+      </section>
+
+      <section class="page" id="page-generate">
+        <div class="page-intro"><div><p class="kicker">Constraint satisfaction</p><h2>Generate allocation</h2><p class="muted">Build a complete assignment with backtracking and constraint propagation.</p></div></div>
+        <div class="generate-grid"><div class="panel run-panel"><div class="step-number">01</div><h3>Choose the run mode</h3><p class="muted">Students are assigned to all eligible, available seats unless specific rooms are selected.</p><label class="form-field"><span>Allocation mode</span><select id="allocationMode"><option>Examination Seating</option><option>Hostel Room/Bed</option></select></label><label class="form-field"><span>Rooms (optional)</span><select id="allocationRooms" multiple size="5"></select></label><div class="algorithm-chips"><span><i class="fa-solid fa-code-branch"></i> Backtracking</span><span><i class="fa-solid fa-filter"></i> Forward checking</span><span><i class="fa-solid fa-bullseye"></i> MRV + LCV</span></div><button class="primary-btn full-btn" id="runAllocation"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate allocation</button></div><div class="panel run-status" id="runStatus"><div class="empty-state"><div class="empty-orb"><i class="fa-solid fa-sitemap"></i></div><h3>Ready when you are</h3><p class="muted">The result, explored nodes and any conflict explanations will appear here.</p></div></div></div>
+      </section>
+
+      <section class="page" id="page-results">
+        <div class="page-intro"><div><p class="kicker">Published output</p><h2>Allocation results</h2><p class="muted" id="resultSummary">No allocation run loaded.</p></div><div class="button-row"><button class="outline-btn" id="printChart"><i class="fa-solid fa-print"></i> Print chart</button><button class="outline-btn" id="exportJson"><i class="fa-solid fa-file-code"></i> JSON</button><button class="outline-btn" id="exportAllocCsv"><i class="fa-solid fa-file-csv"></i> CSV</button><button class="primary-btn" id="exportAllocPdf"><i class="fa-solid fa-file-pdf"></i> PDF</button></div></div>
+        <div class="panel filter-panel"><div class="search-box"><i class="fa-solid fa-search"></i><input id="allocationSearch" placeholder="Search allocation…"></div><select id="allocationRoomFilter"><option value="">All rooms</option></select><select id="allocationPriorityFilter"><option value="">All priorities</option><option>Critical</option><option>High</option><option>Normal</option><option>Low</option></select></div>
+        <div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Student</th><th>Class</th><th>Group</th><th>Priority</th><th>Room</th><th>Seat</th><th>Row × col</th><th>Access</th></tr></thead><tbody id="allocationsTable"></tbody></table></div></div>
+      </section>
+
+      <section class="page" id="page-validation">
+        <div class="page-intro"><div><p class="kicker">Trust & safety</p><h2>Validation report</h2><p class="muted">Check every persisted assignment against the active constraints.</p></div><div class="button-row"><button class="outline-btn" id="validationPdf"><i class="fa-solid fa-file-pdf"></i> Export PDF</button><button class="primary-btn" id="runValidation"><i class="fa-solid fa-shield-halved"></i> Run validation</button></div></div>
+        <div id="validationSummary" class="validation-summary"></div><div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Constraint</th><th>Status</th><th>Details</th></tr></thead><tbody id="validationTable"></tbody></table></div></div>
+      </section>
+
+      <section class="page" id="page-analytics">
+        <div class="page-intro"><div><p class="kicker">Insights</p><h2>Analytics</h2><p class="muted">Explore distribution, priority and accessibility patterns.</p></div></div>
+        <div class="dashboard-grid"><div class="panel chart-panel wide"><div class="panel-head"><h3>Students by group</h3><span class="panel-icon blue"><i class="fa-solid fa-layer-group"></i></span></div><canvas id="groupChart" height="120"></canvas></div><div class="panel chart-panel"><div class="panel-head"><h3>Priority mix</h3><span class="panel-icon amber"><i class="fa-solid fa-flag"></i></span></div><canvas id="priorityChart" height="180"></canvas></div><div class="panel chart-panel"><div class="panel-head"><h3>Accessibility</h3><span class="panel-icon teal"><i class="fa-solid fa-universal-access"></i></span></div><canvas id="accessChart" height="180"></canvas></div></div>
+      </section>
+
+      <section class="page" id="page-settings">
+        <div class="page-intro"><div><p class="kicker">Workspace</p><h2>Settings</h2><p class="muted">Connection checks and demo data controls.</p></div></div>
+        <div class="settings-grid"><div class="panel settings-card"><div class="panel-icon blue"><i class="fa-solid fa-database"></i></div><h3>MongoDB Atlas connection</h3><p class="muted">The backend reads the Atlas URI from <code>.env</code>. It is never sent to this browser.</p><div id="healthStatus" class="connection-status">Checking…</div><button class="outline-btn" id="checkHealth">Check connection</button></div><div class="panel settings-card"><div class="panel-icon indigo"><i class="fa-solid fa-flask"></i></div><h3>Demo data</h3><p class="muted">Load a starter dataset with 20 students, 3 rooms and dynamic seats.</p><div class="button-row"><button class="outline-btn" id="loadDemo">Load default data</button><button class="outline-btn danger-outline" id="resetDemo">Reset demo data</button></div></div><div class="panel settings-card danger-card"><div class="panel-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div><h3>Clear all data</h3><p class="muted">Permanently removes all SmartAlloc documents from the configured database.</p><button class="danger-btn" id="clearData">Clear all data</button></div></div>
+      </section>
+    </main>
+  </div>
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Edit record"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle">Edit record</h3><button class="icon-btn" id="closeModal" aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div><div id="modalBody"></div></div></div>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
